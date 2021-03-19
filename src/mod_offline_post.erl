@@ -12,7 +12,7 @@
   mod_opt_type/1,
   muc_filter_message/5,
   muc_filter_message/3,
-  offline_message/3,
+  %offline_message/3,
   offline_message/1
 ]).
 
@@ -54,41 +54,42 @@ mod_opt_type(_) ->
   [post_url, auth_token].
 
 muc_filter_message(Stanza, MUCState, FromNick) ->
-  PostUrl = gen_mod:get_module_opt(MUCState#state.server_host, ?MODULE, post_url, fun(S) ->
-    iolist_to_binary(S) end, list_to_binary("")),
-  Token = gen_mod:get_module_opt(MUCState#state.server_host, ?MODULE, auth_token, fun(S) ->
-    iolist_to_binary(S) end, list_to_binary("")),
-  Type = xmpp:get_type(Stanza),
+  ?DEBUG("~n#################################### ENTERING MUC FILTER MESSAGE ###################################", []),
+  PostUrl = gen_mod:get_module_opt(MUCState#state.server_host, ?MODULE, post_url),
+  Token = gen_mod:get_module_opt(MUCState#state.server_host, ?MODULE, auth_token),
+  Type = Stanza#message.type,
   BodyTxt = xmpp:get_text(Stanza#message.body),
+  From = Stanza#message.from#jid.luser,
+  To = Stanza#message.to#jid.luser,
 
-  ?DEBUG("Receiving offline message type ~s from ~s to ~s with body \"~s\"", [Type, FromJID#jid.luser, RoomJID#jid.luser, BodyTxt]),
+  ?DEBUG("Receiving offline message type ~s from ~s to group ~s with nick ~s with body \"~s\"", [Type, From, To, FromNick, BodyTxt]),
 
   _LISTUSERS = lists:map(
     fun({_LJID, Info}) ->
       binary_to_list(Info#user.jid#jid.luser) ++ ".."
     end,
-    dict:to_list(MUCState#state.users)
+    maps:to_list(MUCState#state.users)
   ),
-  ?DEBUG(" #########    GROUPCHAT _LISTUSERS = ~p~n  #######   ", [_LISTUSERS]),
+  ?DEBUG("~n #########    GROUPCHAT _LISTUSERS = ~p~n  #######   ", [_LISTUSERS]),
 
   _AFILLIATIONS = lists:map(
     fun({{Uname, _Domain, _Res}, _Stuff}) ->
       binary_to_list(Uname) ++ ".."
     end,
-    dict:to_list(MUCState#state.affiliations)
+    maps:to_list(MUCState#state.affiliations)
   ),
-  ?DEBUG(" #########    GROUPCHAT _AFILLIATIONS = ~p~n  #######   ", [_AFILLIATIONS]),
+  ?DEBUG("~n #########    GROUPCHAT _AFILLIATIONS = ~p~n  #######   ", [_AFILLIATIONS]),
 
   _OFFLINE = lists:subtract(_AFILLIATIONS, _LISTUSERS),
-  ?DEBUG(" #########    GROUPCHAT _OFFLINE = ~p~n  #######   ", [_OFFLINE]),
+  ?DEBUG("~n #########    GROUPCHAT _OFFLINE = ~p~n  #######   ", [_OFFLINE]),
 
   if
-    BodyTxt /= "", length(_OFFLINE) > 0 ->
+    BodyTxt /= <<>>, length(_OFFLINE) > 0 ->
       Sep = "&",
       Post = [
         "type=groupchat", Sep,
-        "to=", RoomJID#jid.luser, Sep,
-        "from=", FromJID#jid.luser, Sep,
+        "to=", To, Sep,
+        "from=", From, Sep,
         "offline=", _OFFLINE, Sep,
         "nick=", FromNick, Sep,
         "body=", BodyTxt, Sep,
@@ -108,7 +109,6 @@ muc_filter_message(Stanza, MUCState, RoomJID, FromJID, FromNick) ->
     iolist_to_binary(S) end, list_to_binary("")),
   Type = xmpp:get_type(Stanza),
   BodyTxt = xmpp:get_text(Stanza#message.body),
-
   ?DEBUG("Receiving offline message type ~s from ~s to ~s with body \"~s\"", [Type, FromJID#jid.luser, RoomJID#jid.luser, BodyTxt]),
 
   _LISTUSERS = lists:map(
