@@ -54,7 +54,7 @@ mod_opt_type(_) ->
   [post_url, auth_token].
 
 muc_filter_message(Stanza, MUCState, FromNick) ->
-  ?DEBUG("~n#################################### ENTERING MUC FILTER MESSAGE ###################################", []),
+  ?DEBUG("~n#################################### ENTERING MUC FILTER MESSAGE (3) ###################################~n", []),
   PostUrl = gen_mod:get_module_opt(MUCState#state.server_host, ?MODULE, post_url),
   Token = gen_mod:get_module_opt(MUCState#state.server_host, ?MODULE, auth_token),
   Type = Stanza#message.type,
@@ -70,7 +70,7 @@ muc_filter_message(Stanza, MUCState, FromNick) ->
     end,
     maps:to_list(MUCState#state.users)
   ),
-  ?DEBUG("~n #########    GROUPCHAT _LISTUSERS = ~p~n  #######   ", [_LISTUSERS]),
+  ?DEBUG("~n #########    GROUPCHAT _LISTUSERS = ~p~n  #######   ~n ", [_LISTUSERS]),
 
   _AFILLIATIONS = lists:map(
     fun({{Uname, _Domain, _Res}, _Stuff}) ->
@@ -95,14 +95,16 @@ muc_filter_message(Stanza, MUCState, FromNick) ->
         "body=", BodyTxt, Sep,
         "access_token=", Token
       ],
-      ?DEBUG("Sending post request to ~s with body \"~s\"", [PostUrl, Post]),
-      httpc:request(post, {binary_to_list(PostUrl), [], "application/x-www-form-urlencoded", list_to_binary(Post)}, [], []),
+      ?DEBUG("~nSending post request to ~s with body \"~s\"~n", [PostUrl, Post]),
+      {_, Response} = httpc:request(post, {binary_to_list(PostUrl), [], "application/x-www-form-urlencoded", list_to_binary(Post)}, [], []),
+      ?DEBUG("~nRequest response: ~n~s ~n", [Response]),
       Stanza;
     true ->
       Stanza
   end.
 
 muc_filter_message(Stanza, MUCState, RoomJID, FromJID, FromNick) ->
+  ?DEBUG("~n#################################### ENTERING MUC FILTER MESSAGE (5) ###################################~n", []),
   PostUrl = gen_mod:get_module_opt(FromJID#jid.lserver, ?MODULE, post_url, fun(S) ->
     iolist_to_binary(S) end, list_to_binary("")),
   Token = gen_mod:get_module_opt(FromJID#jid.lserver, ?MODULE, auth_token, fun(S) ->
@@ -117,7 +119,7 @@ muc_filter_message(Stanza, MUCState, RoomJID, FromJID, FromNick) ->
     end,
     dict:to_list(MUCState#state.users)
   ),
-  ?DEBUG(" #########    GROUPCHAT _LISTUSERS = ~p~n  #######   ", [_LISTUSERS]),
+  ?DEBUG("~n#########    GROUPCHAT _LISTUSERS = ~p~n  #######~n", [_LISTUSERS]),
 
   _AFILLIATIONS = lists:map(
     fun({{Uname, _Domain, _Res}, _Stuff}) ->
@@ -125,13 +127,13 @@ muc_filter_message(Stanza, MUCState, RoomJID, FromJID, FromNick) ->
     end,
     dict:to_list(MUCState#state.affiliations)
   ),
-  ?DEBUG(" #########    GROUPCHAT _AFILLIATIONS = ~p~n  #######   ", [_AFILLIATIONS]),
+  ?DEBUG("~n#########    GROUPCHAT _AFILLIATIONS = ~p~n  ####### ~", [_AFILLIATIONS]),
 
   _OFFLINE = lists:subtract(_AFILLIATIONS, _LISTUSERS),
-  ?DEBUG(" #########    GROUPCHAT _OFFLINE = ~p~n  #######   ", [_OFFLINE]),
+  ?DEBUG("~n#########    GROUPCHAT _OFFLINE = ~p~n  #######  ~n", [_OFFLINE]),
 
   if
-    BodyTxt /= "", length(_OFFLINE) > 0 ->
+    BodyTxt /=  <<>>, length(_OFFLINE) > 0 ->
       Sep = "&",
       Post = [
         "type=groupchat", Sep,
@@ -143,7 +145,8 @@ muc_filter_message(Stanza, MUCState, RoomJID, FromJID, FromNick) ->
         "access_token=", Token
       ],
       ?DEBUG("Sending post request to ~s with body \"~s\"", [PostUrl, Post]),
-      httpc:request(post, {binary_to_list(PostUrl), [], "application/x-www-form-urlencoded", list_to_binary(Post)}, [], []),
+      {_, Response} = httpc:request(post, {binary_to_list(PostUrl), [], "application/x-www-form-urlencoded", list_to_binary(Post)}, [], []),
+      ?DEBUG("~nRequest response: ~n~s ~n", [Response]),
       Stanza;
     true ->
       Stanza
@@ -152,6 +155,7 @@ muc_filter_message(Stanza, MUCState, RoomJID, FromJID, FromNick) ->
 
 offline_message({_Method, Message} = Recv) ->
 %%    ?INFO_MSG("mod_offline_post1 POST: ~p ", [Message]),
+  ?DEBUG("~n#################################### ENTERING CHAT OFFLINE MESSAGE (2) ###################################~n", []),
   Token = gen_mod:get_module_opt(Message#message.from#jid.lserver, ?MODULE, auth_token),
   PostUrl = gen_mod:get_module_opt(Message#message.from#jid.lserver, ?MODULE, post_url),
   case Message#message.body of
@@ -169,7 +173,7 @@ offline_message({_Method, Message} = Recv) ->
         "body=", BodyText, Sep,
         "access_token=", Token
       ],
-      ?DEBUG("Sending post request to ~s with body \"~s\"", [PostUrl, Post]),
+      ?DEBUG("~n####################################~nSending post request to ~s with body \"~s\"", [PostUrl, Post]),
       httpc:request(post, {binary_to_list(PostUrl), [], "application/x-www-form-urlencoded", list_to_binary(Post)}, [], [])
   end,
   Recv.
