@@ -20,7 +20,7 @@
 
 %-include("ejabberd.hrl").
 %-include("jlib.hrl").
--include("xmpp.hrl").
+-include_lib("xmpp/include/xmpp.hrl").
 -include("logger.hrl").
 -include("mod_muc_room.hrl").
 
