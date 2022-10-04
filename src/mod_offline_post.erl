@@ -5,15 +5,11 @@
 
 -export([
   start/2,
-  init/2,
   stop/1,
   depends/2,
   mod_options/1,
   mod_opt_type/1,
-  muc_filter_message/5,
-  muc_filter_message/3,
-  %offline_message/3,
-  offline_message/1
+  offline_message/2
 ]).
 
 -include_lib("xmpp/include/xmpp.hrl").
@@ -22,17 +18,12 @@
 
 
 start(Host, _Opts) ->
-  ?INFO_MSG("Starting mod_offline_post", []),
   ejabberd_hooks:add(offline_message_hook, Host, ?MODULE, offline_message_hook, 20),
   ok.
 
 stop(Host) ->
-  ?INFO_MSG("Stopping mod_offline_post", []),
   ejabberd_hooks:delete(offline_message_hook, Host, ?MODULE, offline_message, 10),
   ok.
-
-reload(_Host, _NewOpts, _OldOpts) ->
-    ok.
 
 depends(_Host, _Opts) ->
     [].
