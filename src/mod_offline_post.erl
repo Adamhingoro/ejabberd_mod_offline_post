@@ -3,42 +3,29 @@
 
 -behaviour(gen_mod).
 
--export([
-  start/2,
-  stop/1,
-  depends/2,
-  mod_options/1,
-  mod_opt_type/1,
-  offline_message/1
-]).
-
--include_lib("xmpp/include/xmpp.hrl").
+%% Required by ?INFO_MSG macros
 -include("logger.hrl").
--include("mod_muc_room.hrl").
 
+%% Required by ?T macro
+-include("translate.hrl").
 
-start(Host, _Opts) ->
-  ejabberd_hooks:add(offline_message_hook, Host, ?MODULE, offline_message_hook, 20),
-  ok.
+%% gen_mod API callbacks
+-export([start/2, stop/1, depends/2, mod_options/1, mod_doc/0]).
 
-stop(Host) ->
-  ejabberd_hooks:delete(offline_message_hook, Host, ?MODULE, offline_message, 10),
-  ok.
+start(_Host, _Opts) ->
+    ?INFO_MSG("Hello, ejabberd world!", []),
+    ok.
+
+stop(_Host) ->
+    ?INFO_MSG("Bye bye, ejabberd world!", []),
+    ok.
 
 depends(_Host, _Opts) ->
-  [].
+    [].
 
 mod_options(_Host) ->
-  [post_url, auth_token].
+    [].
 
-mod_opt_type(post_url) -> fun(B) when is_binary(B) -> B end;
-mod_opt_type(auth_token) -> fun(B) when is_binary(B) -> B end;
-mod_opt_type(_) ->
-  [post_url, auth_token].
-
-
-
--spec offline_message({_, message()}) -> {_, message()} | {stop, {drop, message()}}.
-offline_message({_Action, #message{} = Msg} = Acc) ->
-  ?DEBUG("~n#################################### ENTERING CHAT OFFLINE MESSAGE (2) ###################################~n", []),
-  ok.
+mod_doc() ->
+    #{desc =>
+          ?T("This is an example module.")}.
