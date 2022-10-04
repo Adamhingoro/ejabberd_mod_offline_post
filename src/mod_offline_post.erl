@@ -9,7 +9,7 @@
   depends/2,
   mod_options/1,
   mod_opt_type/1,
-  offline_message/2
+  offline_message/1
 ]).
 
 -include_lib("xmpp/include/xmpp.hrl").
@@ -26,7 +26,7 @@ stop(Host) ->
   ok.
 
 depends(_Host, _Opts) ->
-    [].
+  [].
 
 mod_options(_Host) ->
   [post_url, auth_token].
@@ -41,4 +41,4 @@ mod_opt_type(_) ->
 -spec offline_message({_, message()}) -> {_, message()} | {stop, {drop, message()}}.
 offline_message({_Action, #message{} = Msg} = Acc) ->
   ?DEBUG("~n#################################### ENTERING CHAT OFFLINE MESSAGE (2) ###################################~n", []),
-  Recv.
+  ok.
