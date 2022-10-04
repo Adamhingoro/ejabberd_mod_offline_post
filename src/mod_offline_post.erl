@@ -1,5 +1,5 @@
 -module(mod_offline_post).
--author('Diamond by BOLD').
+-author('Push Mod By Adam').
 
 -behaviour(gen_mod).
 
@@ -24,26 +24,22 @@
 -include("logger.hrl").
 -include("mod_muc_room.hrl").
 
-start(Host, Opts) ->
-  ?INFO_MSG("Starting mod_offline_post", []),
-  register(?PROCNAME, spawn(?MODULE, init, [Host, Opts])),
-  ok.
 
-init(Host, _Opts) ->
-  inets:start(),
-  ssl:start(),
-  ejabberd_hooks:add(muc_filter_message, Host, ?MODULE, muc_filter_message, 10),
-  ejabberd_hooks:add(offline_message_hook, Host, ?MODULE, offline_message, 10),
+start(Host, _Opts) ->
+  ?INFO_MSG("Starting mod_offline_post", []),
+  ejabberd_hooks:add(offline_message_hook, Host, ?MODULE, offline_message_hook, 20),
   ok.
 
 stop(Host) ->
   ?INFO_MSG("Stopping mod_offline_post", []),
-  ejabberd_hooks:delete(muc_filter_message, Host, ?MODULE, muc_filter_message, 10),
   ejabberd_hooks:delete(offline_message_hook, Host, ?MODULE, offline_message, 10),
   ok.
 
+reload(_Host, _NewOpts, _OldOpts) ->
+    ok.
+
 depends(_Host, _Opts) ->
-  [].
+    [].
 
 mod_options(_Host) ->
   [post_url, auth_token].
@@ -53,108 +49,10 @@ mod_opt_type(auth_token) -> fun(B) when is_binary(B) -> B end;
 mod_opt_type(_) ->
   [post_url, auth_token].
 
-muc_filter_message(Stanza, MUCState, FromNick) ->
-  ?DEBUG("~n#################################### ENTERING MUC FILTER MESSAGE (3) ###################################~n", []),
-  PostUrl = gen_mod:get_module_opt(MUCState#state.server_host, ?MODULE, post_url),
-  Token = gen_mod:get_module_opt(MUCState#state.server_host, ?MODULE, auth_token),
-  Type = Stanza#message.type,
-  BodyTxt = xmpp:get_text(Stanza#message.body),
-  From = Stanza#message.from#jid.luser,
-  To = Stanza#message.to#jid.luser,
-
-  ?DEBUG("Receiving offline message type ~s from ~s to group ~s with nick ~s with body \"~s\"", [Type, From, To, FromNick, BodyTxt]),
-
-  _LISTUSERS = lists:map(
-    fun({_LJID, Info}) ->
-      binary_to_list(Info#user.jid#jid.luser) ++ ".."
-    end,
-    maps:to_list(MUCState#state.users)
-  ),
-  ?DEBUG("~n #########    GROUPCHAT _LISTUSERS = ~p~n  #######   ~n ", [_LISTUSERS]),
-
-  _AFILLIATIONS = lists:map(
-    fun({{Uname, _Domain, _Res}, _Stuff}) ->
-      binary_to_list(Uname) ++ ".."
-    end,
-    maps:to_list(MUCState#state.affiliations)
-  ),
-  ?DEBUG("~n #########    GROUPCHAT _AFILLIATIONS = ~p~n  #######   ", [_AFILLIATIONS]),
-
-  _OFFLINE = lists:subtract(_AFILLIATIONS, _LISTUSERS),
-  ?DEBUG("~n #########    GROUPCHAT _OFFLINE = ~p~n  #######   ", [_OFFLINE]),
-
-  if
-    BodyTxt /= <<>>, length(_OFFLINE) > 0 ->
-      Sep = "&",
-      Post = [
-        "type=groupchat", Sep,
-        "to=", To, Sep,
-        "from=", From, Sep,
-        "offline=", _OFFLINE, Sep,
-        "nick=", FromNick, Sep,
-        "body=", BodyTxt, Sep,
-        "access_token=", Token
-      ],
-      ?DEBUG("~nSending post request to ~s with body \"~s\"~n", [PostUrl, Post]),
-      {_, Response} = httpc:request(post, {binary_to_list(PostUrl), [], "application/x-www-form-urlencoded", list_to_binary(Post)}, [], []),
-      ?DEBUG("~nRequest response: ~n~s ~n", [Response]),
-      Stanza;
-    true ->
-      Stanza
-  end.
-
-muc_filter_message(Stanza, MUCState, RoomJID, FromJID, FromNick) ->
-  ?DEBUG("~n#################################### ENTERING MUC FILTER MESSAGE (5) ###################################~n", []),
-  PostUrl = gen_mod:get_module_opt(FromJID#jid.lserver, ?MODULE, post_url, fun(S) ->
-    iolist_to_binary(S) end, list_to_binary("")),
-  Token = gen_mod:get_module_opt(FromJID#jid.lserver, ?MODULE, auth_token, fun(S) ->
-    iolist_to_binary(S) end, list_to_binary("")),
-  Type = xmpp:get_type(Stanza),
-  BodyTxt = xmpp:get_text(Stanza#message.body),
-  ?DEBUG("Receiving offline message type ~s from ~s to ~s with body \"~s\"", [Type, FromJID#jid.luser, RoomJID#jid.luser, BodyTxt]),
-
-  _LISTUSERS = lists:map(
-    fun({_LJID, Info}) ->
-      binary_to_list(Info#user.jid#jid.luser) ++ ".."
-    end,
-    dict:to_list(MUCState#state.users)
-  ),
-  ?DEBUG("~n#########    GROUPCHAT _LISTUSERS = ~p~n  #######~n", [_LISTUSERS]),
-
-  _AFILLIATIONS = lists:map(
-    fun({{Uname, _Domain, _Res}, _Stuff}) ->
-      binary_to_list(Uname) ++ ".."
-    end,
-    dict:to_list(MUCState#state.affiliations)
-  ),
-  ?DEBUG("~n#########    GROUPCHAT _AFILLIATIONS = ~p~n  ####### ~", [_AFILLIATIONS]),
-
-  _OFFLINE = lists:subtract(_AFILLIATIONS, _LISTUSERS),
-  ?DEBUG("~n#########    GROUPCHAT _OFFLINE = ~p~n  #######  ~n", [_OFFLINE]),
-
-  if
-    BodyTxt /=  <<>>, length(_OFFLINE) > 0 ->
-      Sep = "&",
-      Post = [
-        "type=groupchat", Sep,
-        "to=", RoomJID#jid.luser, Sep,
-        "from=", FromJID#jid.luser, Sep,
-        "offline=", _OFFLINE, Sep,
-        "nick=", FromNick, Sep,
-        "body=", BodyTxt, Sep,
-        "access_token=", Token
-      ],
-      ?DEBUG("Sending post request to ~s with body \"~s\"", [PostUrl, Post]),
-      {_, Response} = httpc:request(post, {binary_to_list(PostUrl), [], "application/x-www-form-urlencoded", list_to_binary(Post)}, [], []),
-      ?DEBUG("~nRequest response: ~n~s ~n", [Response]),
-      Stanza;
-    true ->
-      Stanza
-  end.
 
 
-offline_message({_Method, Message} = Recv) ->
-%%    ?INFO_MSG("mod_offline_post1 POST: ~p ", [Message]),
+-spec offline_message({_, message()}) -> {_, message()} | {stop, {drop, message()}}.
+offline_message({_Action, #message{} = Msg} = Acc) ->
   ?DEBUG("~n#################################### ENTERING CHAT OFFLINE MESSAGE (2) ###################################~n", []),
   Token = gen_mod:get_module_opt(Message#message.from#jid.lserver, ?MODULE, auth_token),
   PostUrl = gen_mod:get_module_opt(Message#message.from#jid.lserver, ?MODULE, post_url),
