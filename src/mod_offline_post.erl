@@ -10,22 +10,25 @@
 -include("translate.hrl").
 
 %% gen_mod API callbacks
--export([start/2, stop/1, depends/2, mod_options/1, mod_doc/0]).
+-export([start/2, stop/1, depends/2, reload/3, mod_options/1, mod_doc/0]).
 
 start(_Host, _Opts) ->
-    ?INFO_MSG("Hello, ejabberd world!", []),
-    ok.
+  ?INFO_MSG("Hello, ejabberd world!", []),
+  ok.
 
 stop(_Host) ->
-    ?INFO_MSG("Bye bye, ejabberd world!", []),
-    ok.
+  ?INFO_MSG("Bye bye, ejabberd world!", []),
+  ok.
 
 depends(_Host, _Opts) ->
-    [].
+  [].
+
+reload(_Host, _NewOpts, _OldOpts) ->
+    ok.
 
 mod_options(_Host) ->
-    [].
+  [].
 
 mod_doc() ->
-    #{desc =>
-          ?T("This is an example module.")}.
+  #{desc =>
+      ?T("This is an example module.")}.
