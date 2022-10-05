@@ -1,11 +1,13 @@
 -module(mod_offline_post).
 -behaviour(gen_mod).
 
-
 -include_lib("xmpp/include/xmpp.hrl").
 
 %% Required by ?INFO_MSG macros
 -include("logger.hrl").
+
+%% Required by ?T macro
+-include("translate.hrl").
 
 %% gen_mod API callbacks
 -export([start/2, stop/1, depends/2, reload/3, mod_options/1, mod_doc/0]).
@@ -28,4 +30,5 @@ mod_options(_Host) ->
   [].
 
 mod_doc() ->
-  [].
+    #{desc =>
+          ?T("This is an example module.")}.
