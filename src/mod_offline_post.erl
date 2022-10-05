@@ -1,7 +1,8 @@
 -module(mod_offline_post).
--author('Push Mod By Adam').
-
 -behaviour(gen_mod).
+
+
+-include_lib("xmpp/include/xmpp.hrl").
 
 %% Required by ?INFO_MSG macros
 -include("logger.hrl").
@@ -24,11 +25,10 @@ depends(_Host, _Opts) ->
   [].
 
 reload(_Host, _NewOpts, _OldOpts) ->
-    ok.
+  ok.
 
 mod_options(_Host) ->
   [].
 
 mod_doc() ->
-  #{desc =>
-      ?T("This is an example module.")}.
+  #{desc => ?T("This is an example module.")}.
